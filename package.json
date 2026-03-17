@@ -1,0 +1,33 @@
+{
+  "name": "@tilia/tilia-link",
+  "version": "1.0.0",
+  "description": "TiliaLab Communication Bridge & Telemetry Library",
+  "main": "dist/tilia-link.js",
+  "module": "dist/tilia-link.esm.js",
+  "types": "dist/types/index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "bun test"
+  },
+  "keywords": [
+    "tilia",
+    "telemetry",
+    "assessment",
+    "psychology"
+  ],
+  "author": "TiliaHealth",
+  "license": "proprietary",
+  "type": "module",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.1",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/bun": "^1.3.10",
+    "@types/jsdom": "^28.0.0",
+    "jsdom": "^28.1.0",
+    "rollup": "^4.59.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  }
+}
