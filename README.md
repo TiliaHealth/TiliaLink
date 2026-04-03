@@ -1,5 +1,5 @@
-# game-sdk
-
+# TiliaLink SDK
+Use this to communicate with TiliaHealth backend through the webpage hosted on TiliaHealth servers.
 To install dependencies:
 
 ```bash

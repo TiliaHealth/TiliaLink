@@ -1,0 +1,7 @@
+#!/bin/sh
+# Pre-commit hook: rebuild dist/ and stage it
+
+echo "Building dist..."
+npx rollup -c
+
+git add dist/
