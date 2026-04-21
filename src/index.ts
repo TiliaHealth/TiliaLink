@@ -19,6 +19,11 @@ export interface TiliaEventPayload {
 export type TiliaDoneCallback = (...args: any[]) => void;
 export type TiliaEventHandler<T = any> = (detail: T, done: TiliaDoneCallback) => void;
 
+export interface TiliaGameConfigs<TSession = Record<string, unknown>> {
+  levels: unknown[];
+  [key: string]: unknown;
+}
+
 /**
  * The Client-side Link (Used by Game/Assessment developers)
  */
@@ -63,7 +68,7 @@ export class TiliaLinkClient {
   /**
    * Synchronous access to configurations stored on the element by the host
    */
-  getGameConfigs(): any {
+  getGameConfigs<TSession = Record<string, unknown>>(): TiliaGameConfigs<TSession> | null {
     return (this.element as any)._tiliaConfigs || null;
   }
 
@@ -119,7 +124,7 @@ export class TiliaLinkHost {
     /**
      * Store configurations synchronously on the element and notify any listeners
      */
-    setConfigs(configs: any) {
+    setConfigs(configs: TiliaGameConfigs) {
       (this.element as any)._tiliaConfigs = configs;
       this.emit('host:configs-updated', configs);
     }
