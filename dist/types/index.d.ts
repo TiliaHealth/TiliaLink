@@ -44,6 +44,13 @@ export declare class TiliaLinkClient {
     onStart(handler: TiliaEventHandler): void;
     onPause(handler: TiliaEventHandler): void;
     onResume(handler: TiliaEventHandler): void;
+    /**
+     * Register a config validator.
+     * handler receives (configs, done) where done is called as:
+     *   done(true)              — configs are valid
+     *   done(false, messages)   — configs are invalid, messages is optional
+     */
+    onValidateConfigs(handler: (configs: any, done: (valid: boolean, messages?: any) => void) => void): void;
     emitReady(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
     emitData(data: TiliaEventPayload): void;
     emitDataFlush(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
@@ -79,4 +86,9 @@ export declare class TiliaLinkHost {
     onDataFlush(handler: TiliaEventHandler): void;
     onLevelComplete(handler: TiliaEventHandler): void;
     onGameEnd(handler: TiliaEventHandler): void;
+    /**
+     * Ask the game to validate the given configs.
+     * The game calls done(true) or done(false, messages).
+     */
+    validateConfigs(configs: any, done: (valid: boolean, messages?: any) => void): void;
 }

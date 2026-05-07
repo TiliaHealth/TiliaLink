@@ -65,6 +65,52 @@ describe("TiliaLink", () => {
     });
   });
 
+  test("validateConfigs: game validates and returns true", (done) => {
+    const host = new TiliaLinkHost(element);
+    const client = new TiliaLinkClient(element);
+
+    client.onValidateConfigs((configs, doneValidation) => {
+      expect(configs.stimTime).toBe(100);
+      doneValidation(true);
+    });
+
+    host.validateConfigs({ stimTime: 100 }, (valid, messages) => {
+      expect(valid).toBe(true);
+      expect(messages).toBeUndefined();
+      done();
+    });
+  });
+
+  test("validateConfigs: game rejects with messages", (done) => {
+    const host = new TiliaLinkHost(element);
+    const client = new TiliaLinkClient(element);
+
+    client.onValidateConfigs((configs, doneValidation) => {
+      doneValidation(false, { errors: ["stimTime missing"] });
+    });
+
+    host.validateConfigs({}, (valid, messages) => {
+      expect(valid).toBe(false);
+      expect(messages.errors).toContain("stimTime missing");
+      done();
+    });
+  });
+
+  test("validateConfigs: stores configs on element", (done) => {
+    const host = new TiliaLinkHost(element);
+    const client = new TiliaLinkClient(element);
+
+    client.onValidateConfigs((_configs, doneValidation) => {
+      expect(client.getGameConfigs()).toEqual({ foo: 1 });
+      doneValidation(true);
+    });
+
+    host.validateConfigs({ foo: 1 }, (valid) => {
+      expect(valid).toBe(true);
+      done();
+    });
+  });
+
   test("Fire-and-forget: handler gets no-op done", (done) => {
     const host = new TiliaLinkHost(element);
     const client = new TiliaLinkClient(element);

@@ -65,6 +65,15 @@
         onStart(handler) { this.on('host:start', handler); }
         onPause(handler) { this.on('host:pause', handler); }
         onResume(handler) { this.on('host:resume', handler); }
+        /**
+         * Register a config validator.
+         * handler receives (configs, done) where done is called as:
+         *   done(true)              — configs are valid
+         *   done(false, messages)   — configs are invalid, messages is optional
+         */
+        onValidateConfigs(handler) {
+            this.on('host:validate-configs', handler);
+        }
         emitReady(data = {}, done) { this.emit('game:ready', data, done || null); }
         emitData(data) { this.emit('game:data', data); }
         emitDataFlush(data = {}, done) { this.emit('game:data-flush', data, done || null); }
@@ -121,6 +130,14 @@
         onDataFlush(handler) { this.on('game:data-flush', handler); }
         onLevelComplete(handler) { this.on('game:level-complete', handler); }
         onGameEnd(handler) { this.on('game:game-end', handler); }
+        /**
+         * Ask the game to validate the given configs.
+         * The game calls done(true) or done(false, messages).
+         */
+        validateConfigs(configs, done) {
+            this.element._tiliaConfigs = configs;
+            this.emit('host:validate-configs', configs, done);
+        }
     }
 
     exports.TiliaLinkClient = TiliaLinkClient;
