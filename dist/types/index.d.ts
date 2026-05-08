@@ -52,7 +52,7 @@ export declare class TiliaLinkClient {
      */
     onValidateConfigs(handler: (configs: any, done: (valid: boolean, messages?: any) => void) => void): void;
     emitReady(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
-    emitData(data: TiliaEventPayload): void;
+    emitData(type: string, data?: TiliaEventPayload): void;
     emitDataFlush(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
     emitLevelComplete(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
     emitGameEnd(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;

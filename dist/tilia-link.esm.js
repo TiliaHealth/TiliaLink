@@ -69,7 +69,11 @@ class TiliaLinkClient {
         this.on('host:validate-configs', handler);
     }
     emitReady(data = {}, done) { this.emit('game:ready', data, done || null); }
-    emitData(data) { this.emit('game:data', data); }
+    emitData(type, data = {}) {
+        if (!type)
+            throw new Error("TiliaLink: emitData requires a type");
+        this.emit('game:data', { type, ...data });
+    }
     emitDataFlush(data = {}, done) { this.emit('game:data-flush', data, done || null); }
     emitLevelComplete(data = {}, done) { this.emit('game:level-complete', data, done || null); }
     emitGameEnd(data = {}, done) { this.emit('game:game-end', data, done || null); }
