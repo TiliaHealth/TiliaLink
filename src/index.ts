@@ -88,7 +88,10 @@ export class TiliaLinkClient {
   }
 
   emitReady(data: TiliaEventPayload = {}, done?: TiliaDoneCallback) { this.emit('game:ready', data, done || null); }
-  emitData(data: TiliaEventPayload) { this.emit('game:data', data); }
+  emitData(type: string, data: TiliaEventPayload = {}) {
+    if (!type) throw new Error("TiliaLink: emitData requires a type");
+    this.emit('game:data', { type, ...data });
+  }
   emitDataFlush(data: TiliaEventPayload = {}, done?: TiliaDoneCallback) { this.emit('game:data-flush', data, done || null); }
   emitLevelComplete(data: TiliaEventPayload = {}, done?: TiliaDoneCallback) { this.emit('game:level-complete', data, done || null); }
   emitGameEnd(data: TiliaEventPayload = {}, done?: TiliaDoneCallback) { this.emit('game:game-end', data, done || null); }

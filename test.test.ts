@@ -22,7 +22,7 @@ describe("TiliaLink", () => {
       done();
     });
 
-    client.emitData({ score: 100 });
+    client.emitData("score-report", { score: 100 });
   });
 
   test("Host should emit and Client should receive", (done) => {
@@ -121,6 +121,6 @@ describe("TiliaLink", () => {
       done();
     });
 
-    client.emitData({ score: 42 });
+    client.emitData("score-report", { score: 42 });
   });
 });
