@@ -41,6 +41,21 @@ export declare class TiliaLinkClient {
      * Synchronous access to configurations stored on the element by the host
      */
     getGameConfigs<TSession = Record<string, unknown>>(): TiliaGameConfigs<TSession> | null;
+    /**
+     * Synchronous access to translated strings stored on the element by the host.
+     * Returns a {key: translatedText} map, or empty object if none set.
+     */
+    getStrings(): Record<string, string>;
+    /**
+     * Get a single translated string by key.
+     * Returns the translated string, or empty string if not found.
+     */
+    getString(key: string): string;
+    /**
+     * Request translation for keys not pre-set by the host.
+     * The host resolves them and calls callback with a {key: translatedText} map.
+     */
+    requestStrings(keys: string[], callback: TiliaDoneCallback): void;
     onStart(handler: TiliaEventHandler): void;
     onPause(handler: TiliaEventHandler): void;
     onResume(handler: TiliaEventHandler): void;
@@ -78,6 +93,15 @@ export declare class TiliaLinkHost {
      * Store configurations synchronously on the element and notify any listeners
      */
     setConfigs(configs: TiliaGameConfigs): void;
+    /**
+     * Store translated strings on the element for synchronous access by the client.
+     */
+    setStrings(strings: Record<string, string>): void;
+    /**
+     * Register a handler for when the client requests unknown string keys.
+     * handler receives (keys: string[], done: (resolved: Record<string, string>) => void)
+     */
+    onStringsRequest(handler: (keys: string[], done: (resolved: Record<string, string>) => void) => void): void;
     sendStart(config: TiliaEventPayload): void;
     sendPause(): void;
     sendResume(): void;

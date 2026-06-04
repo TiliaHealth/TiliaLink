@@ -55,6 +55,28 @@ class TiliaLinkClient {
     getGameConfigs() {
         return this.element._tiliaConfigs || null;
     }
+    /**
+     * Synchronous access to translated strings stored on the element by the host.
+     * Returns a {key: translatedText} map, or empty object if none set.
+     */
+    getStrings() {
+        return this.element._tiliaStrings || {};
+    }
+    /**
+     * Get a single translated string by key.
+     * Returns the translated string, or empty string if not found.
+     */
+    getString(key) {
+        const strings = this.element._tiliaStrings || {};
+        return strings[key] || "";
+    }
+    /**
+     * Request translation for keys not pre-set by the host.
+     * The host resolves them and calls callback with a {key: translatedText} map.
+     */
+    requestStrings(keys, callback) {
+        this.emit('game:strings-request', { keys }, callback);
+    }
     // --- Convenience Shortcuts (Client → Host) ---
     onStart(handler) { this.on('host:start', handler); }
     onPause(handler) { this.on('host:pause', handler); }
@@ -117,6 +139,22 @@ class TiliaLinkHost {
     setConfigs(configs) {
         this.element._tiliaConfigs = configs;
         this.emit('host:configs-updated', configs);
+    }
+    /**
+     * Store translated strings on the element for synchronous access by the client.
+     */
+    setStrings(strings) {
+        this.element._tiliaStrings = strings;
+    }
+    /**
+     * Register a handler for when the client requests unknown string keys.
+     * handler receives (keys: string[], done: (resolved: Record<string, string>) => void)
+     */
+    onStringsRequest(handler) {
+        this.on('game:strings-request', (detail, done) => {
+            const keys = detail.keys || [];
+            handler(keys, done);
+        });
     }
     // --- Convenience Shortcuts (Host → Game) ---
     sendStart(config) { this.emit('host:start', config); }
