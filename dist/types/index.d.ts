@@ -16,6 +16,11 @@ export interface TiliaEventPayload {
 }
 export type TiliaDoneCallback = (...args: any[]) => void;
 export type TiliaEventHandler<T = any> = (detail: T, done: TiliaDoneCallback) => void;
+export type TiliaModalDone = (result?: any) => void;
+export type TiliaModalRenderer = (contents: TiliaEventPayload, done: TiliaModalDone) => void;
+export interface TiliaModalOptions {
+    timeoutMs?: number;
+}
 export interface TiliaGameConfigs<TSession = Record<string, unknown>> {
     levels: unknown[];
     [key: string]: unknown;
@@ -71,6 +76,23 @@ export declare class TiliaLinkClient {
     emitDataFlush(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
     emitLevelComplete(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
     emitGameEnd(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
+    /**
+     * Request a host-rendered modal by name, fully data-driven via `contents`.
+     *
+     * Resolves with the host renderer's result, or `null` if this host has no
+     * handler registered for `name` — a passthrough, so the game keeps running
+     * instead of hanging. The presence check is client-side and synchronous,
+     * which is what lets a pinned (older) game bundle survive an older host that
+     * predates the modal: no handler on the element ⇒ resolve immediately.
+     *
+     * `opts.timeoutMs` (opt-in, omitted by default) guards a handler that is
+     * present but broken (throws or never calls done). Do not default it on —
+     * an interactive questionnaire must never time out a slow participant.
+     *
+     * Skips and timeouts are mirrored via emitData so a deployment that silently
+     * drops a modal still leaves a fingerprint in the dataset.
+     */
+    callModal(name: string, contents?: TiliaEventPayload, opts?: TiliaModalOptions): Promise<any>;
 }
 /**
  * The Host-side Link (Used by TiliaLab Page)
@@ -105,6 +127,22 @@ export declare class TiliaLinkHost {
     sendStart(config: TiliaEventPayload): void;
     sendPause(): void;
     sendResume(): void;
+    /**
+     * Register a renderer for a named modal, keyed on the shared element.
+     * The client's callModal(name, contents) invokes this renderer directly
+     * with (contents, done); call done(result) when the participant finishes,
+     * or done() to dismiss with no result.
+     *
+     * The element-level registry (`_tiliaModals`) is the wire contract between
+     * an old client bundle and this (possibly newer) host — keep its shape
+     * additive-only. Rendering is the host's job; all matching, passthrough,
+     * and skip/timeout logging live in the client's callModal.
+     */
+    onModal(name: string, renderer: TiliaModalRenderer): void;
+    /**
+     * Unregister a named modal renderer.
+     */
+    offModal(name: string): void;
     onReady(handler: TiliaEventHandler): void;
     onData(handler: TiliaEventHandler): void;
     onDataFlush(handler: TiliaEventHandler): void;
