@@ -194,3 +194,102 @@ describe("TiliaLink strings API", () => {
     assert.strictEqual(client.getString("key"), "second");
   });
 });
+
+describe("TiliaLink callModal", () => {
+  it("present handler: resolves with the host result", async () => {
+    const el = createElement("modal1");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    host.onModal("playing-quality", (contents: any, done: any) => {
+      assert.strictEqual(contents.topic, "how-well");
+      done({ value: 42 });
+    });
+
+    const result = await client.callModal("playing-quality", { topic: "how-well" });
+    assert.deepStrictEqual(result, { value: 42 });
+  });
+
+  it("absent handler: passthrough resolves null and logs a skip", async () => {
+    const el = createElement("modal2");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    let skip: any = null;
+    host.onData((data: any) => {
+      if (data.type === "modal-skipped") skip = data;
+    });
+
+    const result = await client.callModal("does-not-exist", { a: 1 });
+    assert.strictEqual(result, null);
+    assert.strictEqual(skip.modal, "does-not-exist");
+    assert.strictEqual(skip.reason, "no-handler");
+  });
+
+  it("timeout: broken handler resolves null and logs a timeout", async () => {
+    const el = createElement("modal3");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    let timeout: any = null;
+    host.onData((data: any) => {
+      if (data.type === "modal-timeout") timeout = data;
+    });
+
+    host.onModal("hangs", (_contents: any, _done: any) => {
+      // never calls done — simulates a present-but-broken handler
+    });
+
+    const result = await client.callModal("hangs", {}, { timeoutMs: 20 });
+    assert.strictEqual(result, null);
+    assert.strictEqual(timeout.modal, "hangs");
+  });
+
+  it("done is one-shot: a late second call is ignored", async () => {
+    const el = createElement("modal4");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    let secondDone: any;
+    host.onModal("twice", (_contents: any, done: any) => {
+      done({ first: true });
+      secondDone = done;
+    });
+
+    const result = await client.callModal("twice", {});
+    secondDone({ second: true });
+    assert.deepStrictEqual(result, { first: true });
+  });
+
+  it("offModal unregisters: subsequent call passes through", async () => {
+    const el = createElement("modal5");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    host.onModal("temp", (_c: any, done: any) => done({ ok: true }));
+    host.offModal("temp");
+
+    const result = await client.callModal("temp", {});
+    assert.strictEqual(result, null);
+  });
+
+  it("element-scoped: two instances on one page stay isolated", async () => {
+    const dom = new JSDOM(`<!DOCTYPE html><div id="a"></div><div id="b"></div>`);
+    global.document = dom.window.document as any;
+    global.HTMLElement = dom.window.HTMLElement as any;
+    global.CustomEvent = dom.window.CustomEvent as any;
+
+    const elA = document.getElementById("a")!;
+    const elB = document.getElementById("b")!;
+    const hostA = new TiliaLinkHost(elA);
+    const clientA = new TiliaLinkClient(elA);
+    const clientB = new TiliaLinkClient(elB);
+
+    hostA.onModal("check", (_c: any, done: any) => done({ from: "A" }));
+
+    const resultA = await clientA.callModal("check", {});
+    const resultB = await clientB.callModal("check", {});
+    assert.deepStrictEqual(resultA, { from: "A" });
+    assert.strictEqual(resultB, null);
+  });
+});
