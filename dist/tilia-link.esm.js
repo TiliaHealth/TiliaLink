@@ -77,6 +77,21 @@ class TiliaLinkClient {
     requestStrings(keys, callback) {
         this.emit('game:strings-request', { keys }, callback);
     }
+    /**
+     * Request the translation of a single gettext msgid, optionally namespaced by
+     * context. Supplying `plural` + `count` selects a plural form instead.
+     * The host resolves it against Django's JS catalog.
+     *
+     * `emit` dispatches a CustomEvent, so a registered host handler runs inside
+     * this call and invokes `callback` before `requestString` returns. That is
+     * what lets the game's `_t()` wrapper stay a plain synchronous function.
+     *
+     * With no host attached nothing dispatches and `callback` never fires — the
+     * caller keeps its English msgid, which is the standalone-dev fallback.
+     */
+    requestString(query, callback) {
+        this.emit('game:string-request', { ...query }, callback);
+    }
     // --- Convenience Shortcuts (Client → Host) ---
     onStart(handler) { this.on('host:start', handler); }
     onPause(handler) { this.on('host:pause', handler); }
@@ -196,6 +211,23 @@ class TiliaLinkHost {
         this.on('game:strings-request', (detail, done) => {
             const keys = detail.keys || [];
             handler(keys, done);
+        });
+    }
+    /**
+     * Register the resolver for single-msgid translation requests.
+     * handler receives ({msgid, context}, done) and must call done(text).
+     *
+     * One generic handler serves every game: context travels in the query from
+     * the game source, so the host never enumerates a game's strings.
+     */
+    onStringRequest(handler) {
+        this.on('game:string-request', (detail, done) => {
+            handler({
+                msgid: detail.msgid,
+                context: detail.context,
+                plural: detail.plural,
+                count: detail.count,
+            }, done);
         });
     }
     // --- Convenience Shortcuts (Host → Game) ---

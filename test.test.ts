@@ -195,6 +195,95 @@ describe("TiliaLink strings API", () => {
   });
 });
 
+describe("TiliaLink requestString", () => {
+  it("resolves a plain msgid", () => {
+    const el = createElement("string1");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    host.onStringRequest((query, done) => {
+      assert.strictEqual(query.msgid, "You win!");
+      assert.strictEqual(query.context, undefined);
+      done("Du gewinnst!");
+    });
+
+    let resolved = "";
+    client.requestString({ msgid: "You win!" }, (text) => {
+      resolved = text;
+    });
+
+    assert.strictEqual(resolved, "Du gewinnst!");
+  });
+
+  it("passes context through to the host", () => {
+    const el = createElement("string2");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    host.onStringRequest((query, done) => {
+      assert.strictEqual(query.context, "affectgo");
+      assert.strictEqual(query.msgid, "Sad");
+      done("Traurig");
+    });
+
+    let resolved = "";
+    client.requestString({ msgid: "Sad", context: "affectgo" }, (text) => {
+      resolved = text;
+    });
+
+    assert.strictEqual(resolved, "Traurig");
+  });
+
+  it("callback runs before requestString returns", () => {
+    const el = createElement("string3");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    host.onStringRequest((query, done) => done("resolved"));
+
+    const order: string[] = [];
+    client.requestString({ msgid: "x" }, () => order.push("callback"));
+    order.push("after");
+
+    assert.deepStrictEqual(order, ["callback", "after"]);
+  });
+
+  it("carries plural and count through to the host", () => {
+    const el = createElement("string5");
+    const host = new TiliaLinkHost(el);
+    const client = new TiliaLinkClient(el);
+
+    host.onStringRequest((query, done) => {
+      assert.strictEqual(query.msgid, "You have %1 point");
+      assert.strictEqual(query.plural, "You have %1 points");
+      assert.strictEqual(query.count, 5);
+      done("Du hast 5 Punkte");
+    });
+
+    let resolved = "";
+    client.requestString(
+      { msgid: "You have %1 point", plural: "You have %1 points", count: 5, context: "rogueball" },
+      (text) => {
+        resolved = text;
+      },
+    );
+
+    assert.strictEqual(resolved, "Du hast 5 Punkte");
+  });
+
+  it("leaves the caller untouched when no host handler is registered", () => {
+    const el = createElement("string4");
+    const client = new TiliaLinkClient(el);
+
+    let resolved = "You win!";
+    client.requestString({ msgid: "You win!" }, (text) => {
+      resolved = text;
+    });
+
+    assert.strictEqual(resolved, "You win!");
+  });
+});
+
 describe("TiliaLink callModal", () => {
   it("present handler: resolves with the host result", async () => {
     const el = createElement("modal1");

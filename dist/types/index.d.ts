@@ -16,6 +16,14 @@ export interface TiliaEventPayload {
 }
 export type TiliaDoneCallback = (...args: any[]) => void;
 export type TiliaEventHandler<T = any> = (detail: T, done: TiliaDoneCallback) => void;
+export interface TiliaStringQuery {
+    msgid: string;
+    context?: string;
+    plural?: string;
+    count?: number;
+}
+export type TiliaStringDone = (text: string) => void;
+export type TiliaStringHandler = (query: TiliaStringQuery, done: TiliaStringDone) => void;
 export type TiliaModalDone = (result?: any) => void;
 export type TiliaModalRenderer = (contents: TiliaEventPayload, done: TiliaModalDone) => void;
 export interface TiliaModalOptions {
@@ -61,6 +69,19 @@ export declare class TiliaLinkClient {
      * The host resolves them and calls callback with a {key: translatedText} map.
      */
     requestStrings(keys: string[], callback: TiliaDoneCallback): void;
+    /**
+     * Request the translation of a single gettext msgid, optionally namespaced by
+     * context. Supplying `plural` + `count` selects a plural form instead.
+     * The host resolves it against Django's JS catalog.
+     *
+     * `emit` dispatches a CustomEvent, so a registered host handler runs inside
+     * this call and invokes `callback` before `requestString` returns. That is
+     * what lets the game's `_t()` wrapper stay a plain synchronous function.
+     *
+     * With no host attached nothing dispatches and `callback` never fires — the
+     * caller keeps its English msgid, which is the standalone-dev fallback.
+     */
+    requestString(query: TiliaStringQuery, callback: TiliaStringDone): void;
     onStart(handler: TiliaEventHandler): void;
     onPause(handler: TiliaEventHandler): void;
     onResume(handler: TiliaEventHandler): void;
@@ -124,6 +145,14 @@ export declare class TiliaLinkHost {
      * handler receives (keys: string[], done: (resolved: Record<string, string>) => void)
      */
     onStringsRequest(handler: (keys: string[], done: (resolved: Record<string, string>) => void) => void): void;
+    /**
+     * Register the resolver for single-msgid translation requests.
+     * handler receives ({msgid, context}, done) and must call done(text).
+     *
+     * One generic handler serves every game: context travels in the query from
+     * the game source, so the host never enumerates a game's strings.
+     */
+    onStringRequest(handler: TiliaStringHandler): void;
     sendStart(config: TiliaEventPayload): void;
     sendPause(): void;
     sendResume(): void;
