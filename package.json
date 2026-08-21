@@ -1,6 +1,6 @@
 {
   "name": "@tilia/tilia-link",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "TiliaLab Communication Bridge & Telemetry Library",
   "main": "dist/tilia-link.js",
   "module": "dist/tilia-link.esm.js",

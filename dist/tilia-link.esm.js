@@ -1,4 +1,171 @@
 /**
+ * gettext-shaped string lookup over TiliaLink's string channel.
+ *
+ * This is the game-side half of `requestString`: the host owns the catalog, and
+ * a game only ever writes English msgids at the call site. It lives here rather
+ * than in each game because the Django extractor keys on the identifiers `_t`
+ * and `_n` (see tiliaplay's makemessages override, `--keyword=_t:1c,2`), so
+ * every copy of this wrapper has to agree with the extractor exactly — and
+ * seven near-identical copies did not.
+ *
+ * The lookup is synchronous by design. `requestString` resolves same-page and
+ * calls back before it returns, so `_t()` can be used inline in a Phaser text
+ * style or a template literal. With no client bound — standalone dev, or a host
+ * that has no catalog — the msgid itself is the fallback, which is readable
+ * English rather than a missing-key marker.
+ *
+ * Nothing in here touches an engine: it is msgids in, strings out.
+ */
+let client = null;
+function bindTiliaLink(tiliaLink) {
+    client = tiliaLink;
+}
+function _t(a, b) {
+    let msgid = a;
+    let context;
+    if (b !== undefined) {
+        context = a;
+        msgid = b;
+    }
+    if (!client)
+        return msgid;
+    let resolved = msgid;
+    client.requestString({ msgid, context }, (text) => {
+        resolved = text;
+    });
+    return resolved;
+}
+function _n(a, b, c, d) {
+    let context;
+    let singular = a;
+    let plural = b;
+    let count = c;
+    if (d !== undefined) {
+        context = a;
+        singular = b;
+        plural = c;
+        count = d;
+    }
+    let fallback = plural;
+    if (count === 1)
+        fallback = singular;
+    if (!client)
+        return fallback;
+    let resolved = fallback;
+    client.requestString({ msgid: singular, context, plural, count }, (text) => {
+        resolved = text;
+    });
+    return resolved;
+}
+/**
+ * Django-style named interpolation. An unknown name is left as literal text
+ * rather than becoming "undefined", so a typo ships as a visible `%(name)s`
+ * that check_game_i18n's placeholder pass can catch.
+ */
+function interpolate(fmt, values) {
+    return fmt.replace(/%\((\w+)\)s/g, function (match, name) {
+        if (!(name in values))
+            return match;
+        return String(values[name]);
+    });
+}
+
+/**
+ * Device-pixel rendering units.
+ *
+ * A canvas sized in CSS pixels holds a fraction of the pixels a retina screen
+ * has and the compositor smears each one. The fix is to size the backing store
+ * in device pixels and apply a matching inverse zoom, which leaves the CSS
+ * footprint unchanged. The engine then works in device pixels, and every size
+ * a game authors has to be converted — hence `u()` and `px()`.
+ *
+ * **Author every size in CSS pixels and wrap it in u() or px().** A CSS pixel
+ * is the device-independent unit, so u(12) is the same physical size on every
+ * screen and only the number of device pixels behind it changes. That holds
+ * even when the GL context limits the scale: the limit trades sharpness, never
+ * size.
+ *
+ * This is plain arithmetic and one WebGL probe — no engine. Applying the scale
+ * is the engine's job and stays in the game (Phaser: a Scale.NONE canvas whose
+ * size and zoom are re-set on resize; see template-phaserio-game's
+ * `syncGameSize`, and phaser-catchthedrop for the fixed-design-resolution
+ * variant that pins the world at the boot scale and moves only the zoom).
+ */
+let deviceScale = 1;
+/**
+ * The device's full ratio, limited only by what the GL context will allocate.
+ *
+ * The backing store cannot exceed MAX_TEXTURE_SIZE or MAX_RENDERBUFFER_SIZE,
+ * because boot-time render targets are single full-canvas textures with no
+ * mosaic path. Exceeding it fails silently — the texture gets no storage and
+ * WebGL reports "Framebuffer status: Incomplete Attachment".
+ *
+ * Limits as low as 2048 are real: Firefox with privacy.resistFingerprinting
+ * clamps to exactly that and enforces it. A large window can then exceed the
+ * limit even at ratio 1, so the scale may fall below 1 — soft, but running.
+ *
+ * Both axes are checked separately, because a tall portrait window blows the
+ * height limit while its width is still fine.
+ */
+function resolveDevicePixelScale(ratio, width, height, maxDimension) {
+    const requested = ratio || 1;
+    if (!maxDimension || !width || !height) {
+        return requested;
+    }
+    return Math.min(requested, maxDimension / width, maxDimension / height);
+}
+/** Largest render target this context will allocate, or 0 with no GL context. */
+function resolveMaxTextureSize() {
+    const probe = document.createElement('canvas');
+    const gl = probe.getContext('webgl2') || probe.getContext('webgl');
+    if (!gl) {
+        return 0;
+    }
+    const limit = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return limit;
+}
+function bindDevicePixelScale(value) {
+    deviceScale = value;
+}
+function getDevicePixelScale() {
+    return deviceScale;
+}
+/** CSS pixels to world units. Use for every radius, gap, stroke and offset. */
+function u(cssPixels) {
+    return cssPixels * deviceScale;
+}
+/** CSS pixels to a font-size string. */
+function px(cssPixels) {
+    return Math.round(cssPixels * deviceScale) + 'px';
+}
+/**
+ * World units back to CSS pixels. Telemetry goes through this: a world
+ * measurement logged raw is in device pixels and so varies with the
+ * participant's screen, which stops the same task comparing across sessions.
+ */
+function toCssPixels(worldUnits) {
+    return worldUnits / deviceScale;
+}
+/**
+ * For layout objects authored in CSS pixels — breakpoints describe device
+ * classes, which are a CSS-pixel concept — converts every numeric value to
+ * world units in one place rather than at every use site.
+ */
+function scaleLayout(layout) {
+    const scaled = {};
+    for (const key of Object.keys(layout)) {
+        const value = layout[key];
+        if (typeof value === 'number') {
+            scaled[key] = value * deviceScale;
+            continue;
+        }
+        scaled[key] = value;
+    }
+    return scaled;
+}
+
+/**
  * TiliaLink - DOM-Scoped Communication Bridge
  * Scopes events to a shared DOM element to avoid global window pollution
  * while preserving full access to Web APIs (Vibrate, Sensors, etc.)
@@ -275,5 +442,5 @@ class TiliaLinkHost {
     }
 }
 
-export { TiliaLinkClient, TiliaLinkHost };
+export { TiliaLinkClient, TiliaLinkHost, _n, _t, bindDevicePixelScale, bindTiliaLink, getDevicePixelScale, interpolate, px, resolveDevicePixelScale, resolveMaxTextureSize, scaleLayout, toCssPixels, u };
 //# sourceMappingURL=tilia-link.esm.js.map

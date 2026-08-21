@@ -324,3 +324,21 @@ export class TiliaLinkHost {
       this.emit('host:validate-configs', configs, done);
     }
 }
+
+/**
+ * Shared game-side helpers. Engine-agnostic on purpose: the string wrapper is
+ * the game half of this file's own string channel, and the display units are
+ * arithmetic over devicePixelRatio. Anything that has to touch a game engine
+ * stays in the game — see template-phaserio-game.
+ */
+export { bindTiliaLink, _t, _n, interpolate } from './i18n';
+export {
+  resolveDevicePixelScale,
+  resolveMaxTextureSize,
+  bindDevicePixelScale,
+  getDevicePixelScale,
+  u,
+  px,
+  toCssPixels,
+  scaleLayout,
+} from './display';
