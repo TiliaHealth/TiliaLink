@@ -1,10 +1,18 @@
 {
   "name": "@tilia/tilia-link",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "TiliaLab Communication Bridge & Telemetry Library",
   "main": "dist/tilia-link.js",
   "module": "dist/tilia-link.esm.js",
   "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/tilia-link.esm.js",
+      "require": "./dist/tilia-link.js"
+    },
+    "./dist/*": "./dist/*"
+  },
   "scripts": {
     "build": "rollup -c",
     "setup": "git config core.hooksPath .githooks",
