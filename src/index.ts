@@ -132,7 +132,12 @@ export class TiliaLinkClient {
 
   // --- Convenience Shortcuts (Client → Host) ---
 
-  onStart(handler: TiliaEventHandler) { this.on('host:start', handler); }
+  /**
+   * The host's start signal. It carries no payload: every configuration value
+   * travels through setConfigs() / getGameConfigs() and is in place before
+   * the game emits game:ready. A handler that wants tuning reads it there.
+   */
+  onStart(handler: () => void) { this.on('host:start', () => handler()); }
   onPause(handler: TiliaEventHandler) { this.on('host:pause', handler); }
   onResume(handler: TiliaEventHandler) { this.on('host:resume', handler); }
   /**
@@ -342,7 +347,11 @@ export class TiliaLinkHost {
 
     // --- Convenience Shortcuts (Host → Game) ---
 
-    sendStart(config: TiliaEventPayload) { this.emit('host:start', config); }
+    /**
+     * Bare start signal. Deliberately takes no argument: tuning must be set
+     * with setConfigs() before this, never smuggled in on the start event.
+     */
+    sendStart() { this.emit('host:start'); }
     sendPause() { this.emit('host:pause'); }
     sendResume() { this.emit('host:resume'); }
 

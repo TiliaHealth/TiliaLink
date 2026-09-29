@@ -266,7 +266,12 @@
             this.emit('game:string-request', { ...query }, callback);
         }
         // --- Convenience Shortcuts (Client → Host) ---
-        onStart(handler) { this.on('host:start', handler); }
+        /**
+         * The host's start signal. It carries no payload: every configuration value
+         * travels through setConfigs() / getGameConfigs() and is in place before
+         * the game emits game:ready. A handler that wants tuning reads it there.
+         */
+        onStart(handler) { this.on('host:start', () => handler()); }
         onPause(handler) { this.on('host:pause', handler); }
         onResume(handler) { this.on('host:resume', handler); }
         /**
@@ -278,14 +283,74 @@
         onValidateConfigs(handler) {
             this.on('host:validate-configs', handler);
         }
+        /**
+         * Announce that the bundle has booted and the game is mounted.
+         *
+         * OPTIONAL. The host does not block on it; it is a diagnostic marker that
+         * separates "never loaded" from "loaded and then went quiet" when a session
+         * arrives empty.
+         */
         emitReady(data = {}, done) { this.emit('game:ready', data, done || null); }
+        /**
+         * Emit one measurement row. REQUIRED — this is the whole point of the game.
+         *
+         * The host appends each row to its event log and syncs it to the server. A
+         * game that never calls this produces no dataset, however well it plays.
+         *
+         * `data` must be FLAT and `snake_case`, and emitted at the moment the data
+         * point completes, not buffered into an end-of-run summary — a participant
+         * who closes the tab must still leave behind everything up to that point.
+         * Throws if `type` is missing, since an untyped row cannot be queried.
+         */
         emitData(type, data = {}) {
             if (!type)
                 throw new Error("TiliaLink: emitData requires a type");
             this.emit('game:data', { type, ...data });
         }
+        /**
+         * Ask the host to sync buffered rows to the server now.
+         *
+         * OPTIONAL, and purely an optimisation. The host autosaves on an interval
+         * and flushes again inside its `game:game-end` handler, so a game that never
+         * calls this loses nothing — it only syncs later. Use it before a long pause
+         * or a risky transition to shorten the window of unsynced data. Do not treat
+         * it as part of the completion contract.
+         */
         emitDataFlush(data = {}, done) { this.emit('game:data-flush', data, done || null); }
+        /**
+         * Report that a level finished.
+         *
+         * OPTIONAL progress telemetry. It is not a gate: the host does not count
+         * these or decide the session is over from them. Level results that matter
+         * analytically belong in `emitData` rows; this is a coarse progress ping on
+         * top of those.
+         */
         emitLevelComplete(data = {}, done) { this.emit('game:level-complete', data, done || null); }
+        /**
+         * Declare the session over. REQUIRED, and the single most consequential call
+         * in this API.
+         *
+         * The host's `onGameEnd` handler appends a final `game-complete` row, stops
+         * the autosave interval, flushes everything to the server and — when a
+         * `SCHEDULED_ASSESSMENT_UUID` is present — POSTs `game_completion_payload`
+         * back to Django, which marks the ScheduledAssessment complete and redirects
+         * the participant onward.
+         *
+         * Nothing else triggers that. Without this call the participant finishes the
+         * game, sees a normal final screen, and is simply stranded: the assessment
+         * stays open forever and the researcher sees a session that never closed.
+         *
+         * Fire it EXACTLY ONCE, on every path that ends the session. *When* is a
+         * per-game call: most games emit as soon as the game is logically over (last
+         * trial, timer expiry, abort) and let the host redirect be the ending — that
+         * is the default. Defer to an exit tap only when the game shows a summary
+         * the participant is meant to read, since the host redirects on receipt.
+         *
+         * This failure is invisible from inside the game: the build is green, the
+         * game plays correctly, and only the platform notices. It has already
+         * shipped once, in rogueball 0.1.1/0.1.2, when a final-screen layout
+         * refactor relabelled a button and dropped its call with it.
+         */
         emitGameEnd(data = {}, done) { this.emit('game:game-end', data, done || null); }
         /**
          * Request a host-rendered modal by name, fully data-driven via `contents`.
@@ -404,7 +469,11 @@
             });
         }
         // --- Convenience Shortcuts (Host → Game) ---
-        sendStart(config) { this.emit('host:start', config); }
+        /**
+         * Bare start signal. Deliberately takes no argument: tuning must be set
+         * with setConfigs() before this, never smuggled in on the start event.
+         */
+        sendStart() { this.emit('host:start'); }
         sendPause() { this.emit('host:pause'); }
         sendResume() { this.emit('host:resume'); }
         /**

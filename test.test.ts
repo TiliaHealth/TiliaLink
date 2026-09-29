@@ -31,12 +31,13 @@ describe("TiliaLink core", () => {
     const host = new TiliaLinkHost(el);
     const client = new TiliaLinkClient(el);
 
-    client.onStart((config: any) => {
-      assert.strictEqual(config.theme, "dark");
+    host.setConfigs({ levels: [], theme: "dark" });
+    client.onStart(() => {
+      assert.strictEqual((client.getGameConfigs() as any).theme, "dark");
       done();
     });
 
-    host.sendStart({ theme: "dark" });
+    host.sendStart();
   });
 
   it("Callback pattern: client emits with done, host calls done", (_t, done) => {
