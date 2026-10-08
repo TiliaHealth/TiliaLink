@@ -102,7 +102,8 @@ readable English, not a missing-key marker.
 
 `logError` / `emitError` — error reporting. Games may not touch `console`, so the
 SDK does it: every call writes a `console.error`, and once a client is bound the
-same `type` and `data` also go out as an `emitData` row in the host's event log.
+same `type` and `data` also go out as a `game:error` event. The host listens with
+`host.on('game:error', ...)` and decides where errors go.
 `logError` works from any module, before or after `bindTiliaLink`:
 
 ```javascript

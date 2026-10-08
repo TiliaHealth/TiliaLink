@@ -76,8 +76,8 @@
      * Games may not touch `console` (template-phaserio-game
      * Rules/no-dom-and-globals.md), so the SDK does it for them: every call writes
      * a `console.error`. Once a client is bound the error also goes out through
-     * `emitError` as a row in the host's event log, so it reaches the dataset
-     * instead of only a devtools panel nobody has open on a participant's phone.
+     * `emitError` as a `game:error` event, so the host can record it instead of
+     * it ending in a devtools panel nobody has open on a participant's phone.
      */
     function logError(type, data = {}) {
         const client = boundClient();
@@ -329,16 +329,17 @@
          * it as part of the completion contract.
          */
         /**
-         * Report an error the game noticed. Writes a `console.error` and emits the
-         * same `type` and `data` as an `emitData` row, so it lands in the host's
-         * event log next to the measurements around it.
+         * Report an error the game noticed. Writes a `console.error` and emits
+         * `game:error` with the same `type` and `data`. It is a separate channel
+         * from `game:data`: the host decides with `on('game:error', ...)` whether an
+         * error goes to its event log, to Bugsink, or both.
          *
          * Games call this instead of `console`, which they may not touch. Prefer the
          * module-level `logError`, which works from any module and before binding.
          */
         emitError(type, data = {}) {
             console.error('TiliaLink:', type, data);
-            this.emitData(type, data);
+            this.emit('game:error', { type, ...data });
         }
         emitDataFlush(data = {}, done) { this.emit('game:data-flush', data, done || null); }
         /**

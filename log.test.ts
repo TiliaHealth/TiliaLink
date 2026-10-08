@@ -33,10 +33,10 @@ describe("error logging", () => {
     assert.deepStrictEqual(printed, [["TiliaLink:", "menu_click_before_start", { button: "play" }]]);
   });
 
-  it("logError with a client bound writes console.error and a data row", () => {
+  it("logError with a client bound writes console.error and a game:error event", () => {
     const el = createElement("game");
     const rows: any[] = [];
-    new TiliaLinkHost(el).onData((row) => rows.push(row));
+    new TiliaLinkHost(el).on('game:error', (row) => rows.push(row));
     bindTiliaLink(new TiliaLinkClient(el));
 
     logError("menu_click_before_start", { button: "play" });
@@ -50,7 +50,7 @@ describe("error logging", () => {
   it("emitError on the client does the same without binding", () => {
     const el = createElement("game");
     const rows: any[] = [];
-    new TiliaLinkHost(el).onData((row) => rows.push(row));
+    new TiliaLinkHost(el).on('game:error', (row) => rows.push(row));
 
     new TiliaLinkClient(el).emitError("config_invalid", { key: "seed" });
 

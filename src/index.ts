@@ -185,16 +185,17 @@ export class TiliaLinkClient {
    * it as part of the completion contract.
    */
   /**
-   * Report an error the game noticed. Writes a `console.error` and emits the
-   * same `type` and `data` as an `emitData` row, so it lands in the host's
-   * event log next to the measurements around it.
+   * Report an error the game noticed. Writes a `console.error` and emits
+   * `game:error` with the same `type` and `data`. It is a separate channel
+   * from `game:data`: the host decides with `on('game:error', ...)` whether an
+   * error goes to its event log, to Bugsink, or both.
    *
    * Games call this instead of `console`, which they may not touch. Prefer the
    * module-level `logError`, which works from any module and before binding.
    */
   emitError(type: string, data: TiliaEventPayload = {}) {
     console.error('TiliaLink:', type, data);
-    this.emitData(type, data);
+    this.emit('game:error', { type, ...data });
   }
 
   emitDataFlush(data: TiliaEventPayload = {}, done?: TiliaDoneCallback) { this.emit('game:data-flush', data, done || null); }
