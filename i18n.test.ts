@@ -1,7 +1,8 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
 import { TiliaLinkClient, TiliaLinkHost } from "./src/index";
-import { bindTiliaLink, _t, _n, interpolate } from "./src/i18n";
+import { bindTiliaLink } from "./src/bind";
+import { _t, _n, interpolate } from "./src/i18n";
 import { JSDOM } from "jsdom";
 
 function createElement(id: string): HTMLElement {

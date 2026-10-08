@@ -1,4 +1,4 @@
-import type { TiliaLinkClient } from './index';
+import { boundClient } from './bind';
 
 /**
  * gettext-shaped string lookup over TiliaLink's string channel.
@@ -19,12 +19,6 @@ import type { TiliaLinkClient } from './index';
  * Nothing in here touches an engine: it is msgids in, strings out.
  */
 
-let client: TiliaLinkClient | null = null;
-
-export function bindTiliaLink(tiliaLink: TiliaLinkClient | null) {
-  client = tiliaLink;
-}
-
 export function _t(msgid: string): string;
 export function _t(context: string, msgid: string): string;
 export function _t(a: string, b?: string): string {
@@ -34,6 +28,7 @@ export function _t(a: string, b?: string): string {
     context = a;
     msgid = b;
   }
+  const client = boundClient();
   if (!client) return msgid;
   let resolved = msgid;
   client.requestString({ msgid, context }, (text: string) => {
@@ -57,6 +52,7 @@ export function _n(a: string, b: string, c: string | number, d?: number): string
   }
   let fallback = plural;
   if (count === 1) fallback = singular;
+  const client = boundClient();
   if (!client) return fallback;
   let resolved = fallback;
   client.requestString({ msgid: singular, context, plural, count }, (text: string) => {

@@ -5,27 +5,19 @@
 })(this, (function (exports) { 'use strict';
 
     /**
-     * gettext-shaped string lookup over TiliaLink's string channel.
-     *
-     * This is the game-side half of `requestString`: the host owns the catalog, and
-     * a game only ever writes English msgids at the call site. It lives here rather
-     * than in each game because the Django extractor keys on the identifiers `_t`
-     * and `_n` (see tiliaplay's makemessages override, `--keyword=_t:1c,2`), so
-     * every copy of this wrapper has to agree with the extractor exactly — and
-     * seven near-identical copies did not.
-     *
-     * The lookup is synchronous by design. `requestString` resolves same-page and
-     * calls back before it returns, so `_t()` can be used inline in a Phaser text
-     * style or a template literal. With no client bound — standalone dev, or a host
-     * that has no catalog — the msgid itself is the fallback, which is readable
-     * English rather than a missing-key marker.
-     *
-     * Nothing in here touches an engine: it is msgids in, strings out.
+     * The one client the module-level helpers (`_t`, `_n`, `logError`) talk to.
+     * A game binds it once in its entry point, right after constructing the
+     * client and before any scene boots. Unbound, each helper has its own
+     * fallback: the msgid for strings, console only for errors.
      */
     let client = null;
     function bindTiliaLink(tiliaLink) {
         client = tiliaLink;
     }
+    function boundClient() {
+        return client;
+    }
+
     function _t(a, b) {
         let msgid = a;
         let context;
@@ -33,6 +25,7 @@
             context = a;
             msgid = b;
         }
+        const client = boundClient();
         if (!client)
             return msgid;
         let resolved = msgid;
@@ -55,6 +48,7 @@
         let fallback = plural;
         if (count === 1)
             fallback = singular;
+        const client = boundClient();
         if (!client)
             return fallback;
         let resolved = fallback;
@@ -74,6 +68,24 @@
                 return match;
             return String(values[name]);
         });
+    }
+
+    /**
+     * Error reporting a game can call from any module, bound or not.
+     *
+     * Games may not touch `console` (template-phaserio-game
+     * Rules/no-dom-and-globals.md), so the SDK does it for them: every call writes
+     * a `console.error`. Once a client is bound the error also goes out through
+     * `emitError` as a row in the host's event log, so it reaches the dataset
+     * instead of only a devtools panel nobody has open on a participant's phone.
+     */
+    function logError(type, data = {}) {
+        const client = boundClient();
+        if (client) {
+            client.emitError(type, data);
+            return;
+        }
+        console.error('TiliaLink:', type, data);
     }
 
     /**
@@ -316,6 +328,18 @@
          * or a risky transition to shorten the window of unsynced data. Do not treat
          * it as part of the completion contract.
          */
+        /**
+         * Report an error the game noticed. Writes a `console.error` and emits the
+         * same `type` and `data` as an `emitData` row, so it lands in the host's
+         * event log next to the measurements around it.
+         *
+         * Games call this instead of `console`, which they may not touch. Prefer the
+         * module-level `logError`, which works from any module and before binding.
+         */
+        emitError(type, data = {}) {
+            console.error('TiliaLink:', type, data);
+            this.emitData(type, data);
+        }
         emitDataFlush(data = {}, done) { this.emit('game:data-flush', data, done || null); }
         /**
          * Report that a level finished.
@@ -525,6 +549,7 @@
     exports.bindTiliaLink = bindTiliaLink;
     exports.getDevicePixelScale = getDevicePixelScale;
     exports.interpolate = interpolate;
+    exports.logError = logError;
     exports.px = px;
     exports.resolveDevicePixelScale = resolveDevicePixelScale;
     exports.resolveMaxTextureSize = resolveMaxTextureSize;

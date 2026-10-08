@@ -100,6 +100,17 @@ interpolate(_t('%(n)s left'), { n: 3 });
 With no client bound, or a host with no catalog, the msgid comes back unchanged —
 readable English, not a missing-key marker.
 
+`logError` / `emitError` — error reporting. Games may not touch `console`, so the
+SDK does it: every call writes a `console.error`, and once a client is bound the
+same `type` and `data` also go out as an `emitData` row in the host's event log.
+`logError` works from any module, before or after `bindTiliaLink`:
+
+```javascript
+import { logError } from '@tilia/tilia-link';
+
+logError('menu_click_before_start', { button: 'play' });
+```
+
 `u` / `px` / `toCssPixels` / `scaleLayout` / `resolveDevicePixelScale` /
 `resolveMaxTextureSize` — device-pixel rendering units. A canvas sized in CSS
 pixels is blurry on a retina screen, so the backing store is sized in device

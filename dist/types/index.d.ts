@@ -126,6 +126,15 @@ export declare class TiliaLinkClient {
      * or a risky transition to shorten the window of unsynced data. Do not treat
      * it as part of the completion contract.
      */
+    /**
+     * Report an error the game noticed. Writes a `console.error` and emits the
+     * same `type` and `data` as an `emitData` row, so it lands in the host's
+     * event log next to the measurements around it.
+     *
+     * Games call this instead of `console`, which they may not touch. Prefer the
+     * module-level `logError`, which works from any module and before binding.
+     */
+    emitError(type: string, data?: TiliaEventPayload): void;
     emitDataFlush(data?: TiliaEventPayload, done?: TiliaDoneCallback): void;
     /**
      * Report that a level finished.
@@ -258,5 +267,7 @@ export declare class TiliaLinkHost {
  * arithmetic over devicePixelRatio. Anything that has to touch a game engine
  * stays in the game — see template-phaserio-game.
  */
-export { bindTiliaLink, _t, _n, interpolate } from './i18n';
+export { bindTiliaLink } from './bind';
+export { _t, _n, interpolate } from './i18n';
+export { logError } from './log';
 export { resolveDevicePixelScale, resolveMaxTextureSize, bindDevicePixelScale, getDevicePixelScale, u, px, toCssPixels, scaleLayout, } from './display';
