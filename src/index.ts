@@ -176,15 +176,6 @@ export class TiliaLinkClient {
   }
 
   /**
-   * Ask the host to sync buffered rows to the server now.
-   *
-   * OPTIONAL, and purely an optimisation. The host autosaves on an interval
-   * and flushes again inside its `game:game-end` handler, so a game that never
-   * calls this loses nothing — it only syncs later. Use it before a long pause
-   * or a risky transition to shorten the window of unsynced data. Do not treat
-   * it as part of the completion contract.
-   */
-  /**
    * Report an error the game noticed. Writes a `console.error` and emits
    * `game:error` with the same `type` and `data`. It is a separate channel
    * from `game:data`: the host decides with `on('game:error', ...)` whether an
@@ -198,6 +189,15 @@ export class TiliaLinkClient {
     this.emit('game:error', { type, ...data });
   }
 
+  /**
+   * Ask the host to sync buffered rows to the server now.
+   *
+   * OPTIONAL, and purely an optimisation. The host autosaves on an interval
+   * and flushes again inside its `game:game-end` handler, so a game that never
+   * calls this loses nothing — it only syncs later. Use it before a long pause
+   * or a risky transition to shorten the window of unsynced data. Do not treat
+   * it as part of the completion contract.
+   */
   emitDataFlush(data: TiliaEventPayload = {}, done?: TiliaDoneCallback) { this.emit('game:data-flush', data, done || null); }
 
   /**
